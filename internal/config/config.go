@@ -10,6 +10,7 @@ import (
 type Config struct {
 	PostgresConnectionString string
 	ServerPort               string
+	InitialCSVDataPath       string
 }
 
 func LoadConfig() (*Config, error) {
@@ -21,6 +22,7 @@ func LoadConfig() (*Config, error) {
 	cfg := &Config{
 		PostgresConnectionString: os.Getenv("POSTGRES_CONNECTION_STRING"),
 		ServerPort:               os.Getenv("PORT"),
+		InitialCSVDataPath:       os.Getenv("INITIAL_CSV_DATA_PATH"),
 	}
 
 	// Add basic validation

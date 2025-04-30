@@ -15,11 +15,12 @@ import (
 type IDB interface {
 
 	// Bank methods
-	GetBankBySwiftCode(swiftCode string) (*models.BankHequarterDTO, error)
+	GetBankBySwiftCode(swiftCode string) (*models.Bank, error)
 	GetBanksByCountry(countryISO2 string) ([]models.Bank, error)
-	CreateBank(bank *models.BankBranchDTO) error
+	CreateBank(bank *models.Bank) error
 	DeleteBankBySwiftCode(swiftCode string) error
 	GetCountryNameByISO2(countryISO2 string) (string, error)
+	UpdateBankHeadquartersId(*models.Bank) error
 
 	Close()
 }
@@ -64,6 +65,7 @@ func (d *DB) Close() {
 // the database name part of this string will be ignored and replaced,
 // typically connect to the 'postgres' or an empty database.
 func EnsureDatabaseExists(dbName string, connectionString string) error {
+	log.Printf("Ensuring database '%s' exists...", dbName)
 	// Parse the connection string URL
 	u, err := url.Parse(connectionString)
 	if err != nil {
@@ -112,6 +114,7 @@ func EnsureDatabaseExists(dbName string, connectionString string) error {
 // Returns a Bank struct if found, or nil if not found.
 // Returns an error if the query fails.
 func (d *DB) GetBankBySwiftCode(swiftCode string) (*models.Bank, error) {
+	log.Print("Retrieving bank by SWIFT code:", swiftCode)
 	query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address
 			  FROM banks WHERE swiftCode = $1`
 	row := d.SQL.QueryRow(query, swiftCode)
@@ -159,6 +162,7 @@ func (d *DB) GetBankBySwiftCode(swiftCode string) (*models.Bank, error) {
 // Returns a slice of Bank structs.
 // Returns an error if the query fails.
 func (d *DB) GetBanksByCountry(countryISO2 string) ([]models.Bank, error) {
+	log.Print("Retrieving banks by country ISO2 code:", countryISO2)
 	query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address
 				 FROM banks WHERE countryISO2 = $1`
 	rows, err := d.SQL.Query(query, countryISO2)
@@ -191,6 +195,7 @@ func (d *DB) GetBanksByCountry(countryISO2 string) ([]models.Bank, error) {
 // Returns nil if the bank was successfully created.
 // The bank.Id field will be populated with the new bank's ID.
 func (d *DB) CreateBank(bank *models.Bank) error {
+	log.Print("Creating new bank:", bank.BankName)
 	query := `INSERT INTO banks (id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
 	err := d.SQL.QueryRow(query,
@@ -212,6 +217,7 @@ func (d *DB) CreateBank(bank *models.Bank) error {
 // Returns an error if the bank does not exist or if the deletion fails.
 // Returns nil if the bank was successfully deleted.
 func (d *DB) DeleteBankBySwiftCode(swiftCode string) error {
+	log.Print("Deleting bank by SWIFT code:", swiftCode)
 	query := `DELETE FROM banks WHERE swift_code = $1`
 	result, err := d.SQL.Exec(query, swiftCode)
 	if err != nil {
@@ -234,6 +240,7 @@ func (d *DB) DeleteBankBySwiftCode(swiftCode string) error {
 // Returns the country name as a string.
 // Returns an error if the query fails.
 func (d *DB) GetCountryNameByISO2(countryISO2 string) (string, error) {
+	log.Print("Retrieving country name by ISO2 code:", countryISO2)
 	query := `SELECT countryName FROM banks WHERE countryISO2 = $1`
 	row := d.SQL.QueryRow(query, countryISO2)
 
@@ -247,4 +254,14 @@ func (d *DB) GetCountryNameByISO2(countryISO2 string) (string, error) {
 	}
 
 	return countryName, nil
+}
+
+func (db *DB) UpdateBankHeadquartersId(bank *models.Bank) error {
+	log.Print("Updating bank headquarters ID")
+	query := `UPDATE banks SET headquartersId = $1 WHERE swiftCode = $2`
+	_, err := db.SQL.Exec(query, bank.HeadquartersId, bank.SwiftCode)
+	if err != nil {
+		return fmt.Errorf("failed to update bank headquarters ID: %w", err)
+	}
+	return nil
 }

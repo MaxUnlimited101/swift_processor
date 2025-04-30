@@ -8,8 +8,8 @@ import (
 type IBankService interface {
 	// Bank methods
 	GetBankBySwiftCode(swiftCode string) (any, error)
-	GetBanksByCountry(countryISO2 string) (models.CountrySpecificBankDTO, error)
-	CreateBank(bank *models.Bank) error
+	GetBanksByCountry(countryISO2 string) (*models.CountrySpecificBankDTO, error)
+	CreateBank(bank *models.BankBranchDTO) error
 	DeleteBankBySwiftCode(swiftCode string) error
 }
 
@@ -32,6 +32,18 @@ func (s *BankService) GetBankBySwiftCode(swiftCode string) (any, error) {
 		return nil, nil
 	}
 	if bank.IsHeadquarter {
+		branchesDTO := make([]models.BankBranchDTO, len(bank.Branches))
+		for i, branch := range bank.Branches {
+			branchesDTO[i] = models.BankBranchDTO{
+				Address:       branch.Address,
+				BankName:      branch.BankName,
+				CountryISO2:   branch.CountryISO2,
+				CountryName:   branch.CountryName,
+				IsHeadquarter: branch.IsHeadquarter,
+				SwiftCode:     branch.SwiftCode,
+			}
+		}
+
 		bankDTO := models.BankHequarterDTO{
 			BankName:      bank.BankName,
 			CountryISO2:   bank.CountryISO2,
@@ -39,7 +51,7 @@ func (s *BankService) GetBankBySwiftCode(swiftCode string) (any, error) {
 			IsHeadquarter: bank.IsHeadquarter,
 			SwiftCode:     bank.SwiftCode,
 			Address:       bank.Address,
-			Branches:      bank.Branches,
+			Branches:      branchesDTO,
 		}
 		return &bankDTO, nil
 	}
@@ -90,7 +102,15 @@ func (s *BankService) GetBanksByCountry(countryISO2 string) (*models.CountrySpec
 }
 
 func (s *BankService) CreateBank(bank *models.BankBranchDTO) error {
-	err := s.DB.CreateBank(bank)
+	newbank := &models.Bank{
+		BankName:      bank.BankName,
+		CountryISO2:   bank.CountryISO2,
+		CountryName:   bank.CountryName,
+		IsHeadquarter: bank.IsHeadquarter,
+		SwiftCode:     bank.SwiftCode,
+		Address:       bank.Address,
+	}
+	err := s.DB.CreateBank(newbank)
 	if err != nil {
 		return err
 	}

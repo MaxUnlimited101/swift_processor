@@ -28,3 +28,4 @@ build/
 
 # Project files
 .env
+data.csv
