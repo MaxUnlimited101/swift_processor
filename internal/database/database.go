@@ -14,12 +14,31 @@ import (
 
 type IDB interface {
 
-	// Bank methods
+	// GetBankBySwiftCode retrieves a bank by its SWIFT code.
+	// Returns a Bank struct if found, or nil if not found.
+	// Returns an error if the query fails.
 	GetBankBySwiftCode(swiftCode string) (*models.Bank, error)
-	GetBanksByCountry(countryISO2 string) ([]models.Bank, error)
+
+	// GetBanksByCountry retrieves all banks in a specific country by its ISO2 code.
+	// Returns a slice of Bank structs.
+	// Returns an error if the query fails.
+	GetBanksByCountry(countryISO2 string) ([]*models.Bank, error)
+
+	// DeleteBankBySwiftCode deletes a bank by its SWIFT code.
+	// Returns an error if the bank does not exist or if the deletion fails.
+	// Returns nil if the bank was successfully deleted.
 	CreateBank(bank *models.Bank) error
+
+	// DeleteBankBySwiftCode deletes a bank by its SWIFT code.
+	// Returns an error if the bank does not exist or if the deletion fails.
+	// Returns nil if the bank was successfully deleted.
 	DeleteBankBySwiftCode(swiftCode string) error
+
+	// GetCountryNameByISO2 retrieves the country name by its ISO2 code.
+	// Returns the country name as a string.
+	// Returns an error if the query fails.
 	GetCountryNameByISO2(countryISO2 string) (string, error)
+
 	UpdateBankHeadquartersId(*models.Bank) error
 
 	Close()
@@ -115,8 +134,8 @@ func EnsureDatabaseExists(dbName string, connectionString string) error {
 // Returns an error if the query fails.
 func (d *DB) GetBankBySwiftCode(swiftCode string) (*models.Bank, error) {
 	log.Print("Retrieving bank by SWIFT code:", swiftCode)
-	query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address
-			  FROM banks WHERE swiftCode = $1`
+	// query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address FROM banks WHERE swiftCode = $1`
+	query := `a`
 	row := d.SQL.QueryRow(query, swiftCode)
 
 	var bank models.Bank
@@ -148,7 +167,7 @@ func (d *DB) GetBankBySwiftCode(swiftCode string) (*models.Bank, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to scan branch row: %w", err)
 			}
-			bank.Branches = append(bank.Branches, branch)
+			bank.Branches = append(bank.Branches, &branch)
 		}
 
 		if err = rows.Err(); err != nil {
@@ -161,7 +180,7 @@ func (d *DB) GetBankBySwiftCode(swiftCode string) (*models.Bank, error) {
 // GetBanksByCountry retrieves all banks in a specific country by its ISO2 code.
 // Returns a slice of Bank structs.
 // Returns an error if the query fails.
-func (d *DB) GetBanksByCountry(countryISO2 string) ([]models.Bank, error) {
+func (d *DB) GetBanksByCountry(countryISO2 string) ([]*models.Bank, error) {
 	log.Print("Retrieving banks by country ISO2 code:", countryISO2)
 	query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address
 				 FROM banks WHERE countryISO2 = $1`
@@ -171,7 +190,7 @@ func (d *DB) GetBanksByCountry(countryISO2 string) ([]models.Bank, error) {
 	}
 	defer rows.Close()
 
-	var banks []models.Bank
+	var banks []*models.Bank
 	for rows.Next() {
 		var bank models.Bank
 		err := rows.Scan(&bank.Id, &bank.BankName, &bank.CountryISO2,
@@ -180,7 +199,7 @@ func (d *DB) GetBanksByCountry(countryISO2 string) ([]models.Bank, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan bank row: %w", err)
 		}
-		banks = append(banks, bank)
+		banks = append(banks, &bank)
 	}
 
 	if err = rows.Err(); err != nil {
