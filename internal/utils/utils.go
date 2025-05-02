@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -45,9 +47,19 @@ func ProcessCSV(filePath string, db database.IDB) error {
 			IsHeadquarter: strings.HasSuffix(record[1], "XXX"),
 		}
 
-		err = db.CreateBank(&bank)
-		if err != nil {
-			return fmt.Errorf("failed to insert bank data into database: %w", err)
+		if bank.IsHeadquarter {
+			bank.HeadquartersId = sql.NullInt64{
+				Int64: 0,
+				Valid: false,
+			}
+			err = db.CreateBank(&bank)
+			if err != nil {
+				if strings.Contains(err.Error(), "duplicate key") {
+					log.Printf("bank with swift code %s already exists, skipping...", bank.SwiftCode)
+					continue
+				}
+				return fmt.Errorf("failed to insert bank data into database: %w", err)
+			}
 		}
 
 		bankMapBySwiftCode[bank.SwiftCode] = &bank
@@ -55,16 +67,23 @@ func ProcessCSV(filePath string, db database.IDB) error {
 
 	for _, bank := range bankMapBySwiftCode {
 		if !bank.IsHeadquarter {
-			// Find the headquarter bank and set HeadquartersId
-			headquarter, exists := bankMapBySwiftCode[bank.SwiftCode[:len(bank.SwiftCode)-3]+"XXX"]
+			// Find the headquarter bank and push to the database
+			headquarter, exists := bankMapBySwiftCode[bank.SwiftCode[:8]+"XXX"]
 			if exists {
-				bank.HeadquartersId = headquarter.Id
-				err := db.UpdateBankHeadquartersId(bank)
+				bank.HeadquartersId = sql.NullInt64{
+					Int64: headquarter.Id,
+					Valid: true,
+				}
+				err = db.CreateBank(bank)
 				if err != nil {
-					return fmt.Errorf("failed to update bank headquarters ID: %w", err)
+					if strings.Contains(err.Error(), "duplicate key") {
+						log.Printf("bank with swift code %s already exists, skipping...", bank.SwiftCode)
+						continue
+					}
+					return fmt.Errorf("failed to insert bank data into database: %w", err)
 				}
 			} else {
-				return fmt.Errorf("headquarter not found for bank with swift code: %s", bank.SwiftCode)
+				log.Printf("headquarter not found for bank with swift code: %s, continuing...", bank.SwiftCode)
 			}
 		}
 	}

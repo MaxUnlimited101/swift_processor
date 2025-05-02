@@ -1,4 +1,4 @@
-package tests
+package handlers
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"maxunlimited.com/swift_processor/internal/handlers"
 	"maxunlimited.com/swift_processor/internal/models"
 )
 
@@ -82,7 +81,7 @@ func TestGetBankBySwiftCodeHandler(t *testing.T) {
 			},
 		},
 	}
-	handler := handlers.NewHandler(mockService)
+	handler := NewHandler(mockService)
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/swift-codes/{swift-code}", handler.GetBankBySwiftCode).Methods("GET")
 
@@ -111,7 +110,7 @@ func TestCreateBankHandler(t *testing.T) {
 	mockService := &MockBankService{
 		banks: make(map[string]*models.Bank),
 	}
-	handler := handlers.NewHandler(mockService)
+	handler := NewHandler(mockService)
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/swift-codes", handler.CreateBank).Methods("POST")
 

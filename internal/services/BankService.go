@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"fmt"
 
 	"maxunlimited.com/swift_processor/internal/database"
@@ -93,6 +94,7 @@ func (s *BankService) GetBankBySwiftCode(swiftCode string) (any, error) {
 // GetBanksByCountry retrieves all banks in a specific country by its ISO2 code.
 // If no banks are found, it returns an empty slice.
 // If an error occurs, it returns the error.
+// If the country is not found, it returns nil.
 func (s *BankService) GetBanksByCountry(countryISO2 string) (*models.CountrySpecificBankDTO, error) {
 	banks, err := s.DB.GetBanksByCountry(countryISO2)
 	if err != nil {
@@ -141,10 +143,13 @@ func (s *BankService) CreateBank(bank *models.BankBranchDTO) error {
 		Branches:      make([]*models.Bank, 0),
 	}
 	if !newbank.IsHeadquarter {
-		headquarterSwiftCode := bank.SwiftCode[:len(bank.SwiftCode)-3] + "XXX"
+		headquarterSwiftCode := bank.SwiftCode[:8] + "XXX"
 		headquarter, err := s.DB.GetBankBySwiftCode(headquarterSwiftCode)
 		if err != nil {
-			newbank.HeadquartersId = headquarter.Id
+			newbank.HeadquartersId = sql.NullInt64{
+				Int64: headquarter.Id,
+				Valid: true,
+			}
 		}
 		if headquarter == nil {
 			return fmt.Errorf("headquarter not found for branch with SWIFT code: %s", bank.SwiftCode)

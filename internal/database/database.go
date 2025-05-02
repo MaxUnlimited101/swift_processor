@@ -134,8 +134,7 @@ func EnsureDatabaseExists(dbName string, connectionString string) error {
 // Returns an error if the query fails.
 func (d *DB) GetBankBySwiftCode(swiftCode string) (*models.Bank, error) {
 	log.Print("Retrieving bank by SWIFT code:", swiftCode)
-	// query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address FROM banks WHERE swiftCode = $1`
-	query := `a`
+	query := `SELECT id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address FROM banks WHERE swiftCode = $1`
 	row := d.SQL.QueryRow(query, swiftCode)
 
 	var bank models.Bank
@@ -215,16 +214,35 @@ func (d *DB) GetBanksByCountry(countryISO2 string) ([]*models.Bank, error) {
 // The bank.Id field will be populated with the new bank's ID.
 func (d *DB) CreateBank(bank *models.Bank) error {
 	log.Print("Creating new bank:", bank.BankName)
-	query := `INSERT INTO banks (id, bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	err := d.SQL.QueryRow(query,
-		bank.BankName,
-		bank.CountryISO2,
-		bank.CountryName,
-		bank.IsHeadquarter,
-		bank.HeadquartersId,
-		bank.SwiftCode,
-		bank.Address).Scan(&bank.Id)
+	var query string
+	var err error
+
+	if bank.IsHeadquarter {
+		query = `INSERT INTO banks (bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+
+		err = d.SQL.QueryRow(query,
+			bank.BankName,
+			bank.CountryISO2,
+			bank.CountryName,
+			bank.IsHeadquarter,
+			nil,
+			bank.SwiftCode,
+			bank.Address).Scan(&bank.Id)
+	} else {
+		query = `INSERT INTO banks (bankName, countryISO2, countryName, isHeadquarter, headquartersId, swiftCode, address)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+
+		err = d.SQL.QueryRow(query,
+			bank.BankName,
+			bank.CountryISO2,
+			bank.CountryName,
+			bank.IsHeadquarter,
+			bank.HeadquartersId,
+			bank.SwiftCode,
+			bank.Address).Scan(&bank.Id)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to create bank: %w", err)
 	}
@@ -237,7 +255,7 @@ func (d *DB) CreateBank(bank *models.Bank) error {
 // Returns nil if the bank was successfully deleted.
 func (d *DB) DeleteBankBySwiftCode(swiftCode string) error {
 	log.Print("Deleting bank by SWIFT code:", swiftCode)
-	query := `DELETE FROM banks WHERE swift_code = $1`
+	query := `DELETE FROM banks WHERE swiftcode = $1`
 	result, err := d.SQL.Exec(query, swiftCode)
 	if err != nil {
 		return fmt.Errorf("failed to delete bank by SWIFT code: %w", err)

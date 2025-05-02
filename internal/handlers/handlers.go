@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"maxunlimited.com/swift_processor/internal/models"
@@ -49,7 +50,7 @@ func (h *Handler) GetBankBySwiftCode(w http.ResponseWriter, r *http.Request) {
 
 	bank, err := h.BankService.GetBankBySwiftCode(swiftCode)
 	if err != nil {
-		http.Error(w, "Error fetching bank data", http.StatusInternalServerError)
+		http.Error(w, "Error fetching bank data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -75,6 +76,10 @@ func (h *Handler) GetBanksByCountry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if banks == nil {
+		http.Error(w, "No such country found in DB", http.StatusNotFound)
+	}
+
 	SendJsonResponse(w, http.StatusOK, banks)
 }
 
@@ -86,6 +91,10 @@ func (h *Handler) CreateBank(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.BankService.CreateBank(&bank); err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			http.Error(w, "Bank with this SWIFT code already exists", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Error creating bank", http.StatusInternalServerError)
 		return
 	}
@@ -96,12 +105,16 @@ func (h *Handler) CreateBank(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteBankBySwiftCode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	swiftCode := vars["swift-code"]
-	if swiftCode == "" {
+	if swiftCode == "" || len(swiftCode) == 0 {
 		http.Error(w, "Missing swiftCode parameter", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.BankService.DeleteBankBySwiftCode(swiftCode); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, "Bank not found", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, "Error deleting bank", http.StatusInternalServerError)
 		return
 	}
