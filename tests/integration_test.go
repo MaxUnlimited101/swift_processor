@@ -122,7 +122,7 @@ func TestIntegrationHandlersAndServices(t *testing.T) {
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
 		if resp.Code != http.StatusBadRequest {
-			t.Fatalf("Expected status Not Found, got %v", resp.Code)
+			t.Fatalf("Expected status Bad request, got %v", resp.Body.String())
 		}
 	})
 

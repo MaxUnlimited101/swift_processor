@@ -91,7 +91,7 @@ func (h *Handler) CreateBank(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.BankService.CreateBank(&bank); err != nil {
-		if strings.Contains(err.Error(), "Duplicate entry") {
+		if strings.Contains(err.Error(), "Duplicate entry") || strings.Contains(err.Error(), "already exists") {
 			http.Error(w, "Bank with this SWIFT code already exists", http.StatusConflict)
 			return
 		}
@@ -112,10 +112,10 @@ func (h *Handler) DeleteBankBySwiftCode(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.BankService.DeleteBankBySwiftCode(swiftCode); err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			http.Error(w, "Bank not found", http.StatusBadRequest)
+			http.Error(w, "Bank not found: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		http.Error(w, "Error deleting bank", http.StatusInternalServerError)
+		http.Error(w, "Error deleting bank: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

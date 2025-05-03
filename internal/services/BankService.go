@@ -142,6 +142,14 @@ func (s *BankService) CreateBank(bank *models.BankBranchDTO) error {
 		Address:       bank.Address,
 		Branches:      make([]*models.Bank, 0),
 	}
+	// Check if the bank already exists
+	existingBank, err := s.DB.GetBankBySwiftCode(bank.SwiftCode)
+	if err != nil {
+		return fmt.Errorf("error checking existing bank: %w", err)
+	}
+	if existingBank != nil {
+		return fmt.Errorf("bank with SWIFT code %s already exists", bank.SwiftCode)
+	}
 	if !newbank.IsHeadquarter {
 		headquarterSwiftCode := bank.SwiftCode[:8] + "XXX"
 		headquarter, err := s.DB.GetBankBySwiftCode(headquarterSwiftCode)
@@ -155,7 +163,7 @@ func (s *BankService) CreateBank(bank *models.BankBranchDTO) error {
 			return fmt.Errorf("headquarter not found for branch with SWIFT code: %s", bank.SwiftCode)
 		}
 	}
-	err := s.DB.CreateBank(newbank)
+	err = s.DB.CreateBank(newbank)
 	if err != nil {
 		return err
 	}

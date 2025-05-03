@@ -49,13 +49,13 @@ func (m *MockDB) CreateBank(bank *models.Bank) error {
 	return nil
 }
 
-func (m *MockDB) UpdateBankHeadquartersId(bank *models.Bank) error {
+func (m *MockDB) UpdateBankHeadquartersId(bank *models.Bank) (int64, error) {
 	// Mock implementation of UpdateBankHeadquartersId
 	if existingBank, exists := m.Map[bank.SwiftCode]; exists {
 		existingBank.HeadquartersId = bank.HeadquartersId
-		return nil
+		return 1, nil
 	}
-	return fmt.Errorf("Bank not found")
+	return 0, fmt.Errorf("Bank not found")
 }
 
 func (m *MockDB) DeleteBankBySwiftCode(swiftCode string) error {

@@ -149,8 +149,8 @@ func TestCreateBankHandler(t *testing.T) {
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
 
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("Expected status Internal Server Error, got %v", resp.Code)
+		if resp.Code != http.StatusConflict {
+			t.Fatalf("Expected status Conflict, got %v", resp.Code)
 		}
 	})
 }

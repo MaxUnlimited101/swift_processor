@@ -39,7 +39,10 @@ type IDB interface {
 	// Returns an error if the query fails.
 	GetCountryNameByISO2(countryISO2 string) (string, error)
 
-	UpdateBankHeadquartersId(*models.Bank) error
+	// UpdateBankHeadquartersId updates the headquarters ID of a bank.
+	// Returns the number of rows affected and an error if the update fails.
+	// Returns 0 if no rows were affected.
+	UpdateBankHeadquartersId(*models.Bank) (int64, error)
 
 	Close()
 }
@@ -293,12 +296,19 @@ func (d *DB) GetCountryNameByISO2(countryISO2 string) (string, error) {
 	return countryName, nil
 }
 
-func (db *DB) UpdateBankHeadquartersId(bank *models.Bank) error {
+// UpdateBankHeadquartersId updates the headquarters ID of a bank.
+// Returns the number of rows affected and an error if the update fails.
+// Returns 0 if no rows were affected.
+func (db *DB) UpdateBankHeadquartersId(bank *models.Bank) (int64, error) {
 	log.Print("Updating bank headquarters ID")
 	query := `UPDATE banks SET headquartersId = $1 WHERE swiftCode = $2`
-	_, err := db.SQL.Exec(query, bank.HeadquartersId, bank.SwiftCode)
+	res, err := db.SQL.Exec(query, bank.HeadquartersId, bank.SwiftCode)
 	if err != nil {
-		return fmt.Errorf("failed to update bank headquarters ID: %w", err)
+		return 0, fmt.Errorf("failed to update bank headquarters ID: %w", err)
 	}
-	return nil
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return rowsAffected, nil
 }
