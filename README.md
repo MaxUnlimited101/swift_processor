@@ -27,7 +27,7 @@ OR:
     cd swift_processor
     ```
 
-2. Install dependencies:
+2. Install dependencies (if you don't want to use Docker):
     ```bash
     go mod tidy
     ```
